@@ -1,14 +1,15 @@
-# Handling Errors in Views
+Handling Errors in Views
+In a Django application, a view function is where all the processing is done. 
 
-In a Django application, a view function is where all the processing is done. It receives the request and formulates the response.
+It receives the request and formulates the response. 
 
-In this reading, you’ll learn how Django handles runtime errors or exceptions.
+In this Reading, you’ll learn how Django handles runtime errors or exceptions.
 
-The response from the view is an object of `HttpResponse`. Its contents are also associated with a respective status code.
+The response from the view is an object of HttpResponse. Its contents are also associated with a respective status code.
 
-For example, status code `404` implies that the resource requested by the client cannot be found. Django has a generic `HttpResponseNotFound` class. You can return its object to convey the appropriate message.
+For example, status code 404 implies that the resource requested by the client cannot be found. Django has a generic HttpResponseNotFound class. You can return its object to convey the appropriate message.
 
-```python
+1234567
 from django.http import HttpResponse, HttpResponseNotFound 
 def my_view(request): 
     # ... 
@@ -16,28 +17,35 @@ def my_view(request):
         return HttpResponseNotFound('<h1>Page not found</h1>') 
     else: 
         return HttpResponse('<h1>Page was found</h1>') 
-```
+You can also return a HttpResponse with the status code denoting the type of error.
 
-You can also return an `HttpResponse` with the status code denoting the type of error.
-
-```python
+1234567
 from django.http import HttpResponse 
 def my_view(request): 
     # ... 
     if condition==True: 
-        return HttpResponse('<h1>Page not found</h1>', status=404) 
+        return HttpResponse('<h1>Page not found</h1>', status_code='404') 
     else: 
         return HttpResponse('<h1>Page was found</h1>') 
-```
+The main difference in using HttpResponseNotFound as opposed to HttpResponse that must be understood is that Django internally sends an error code 404. The appropriate page for 404 can then be configured and rendered, else the browser displays its default 404 view. 
 
-The main difference in using `HttpResponseNotFound` as opposed to `HttpResponse` with a status code is that Django internally sends an error code `404`. The appropriate page for `404` can then be configured and rendered, else the browser displays its default `404` view. 
+A common cause of the 404 status code is the user entering an incorrect URL. 
 
-A common cause of the `404` status code is the user entering an incorrect URL. Django makes it easy to work with this error code. Instead of returning `HttpResponseNotFound()`, you can raise `Http404`, which displays a standard error page with the status.
+Django makes it easy to work with this error code. 
 
-### Handling Database Query Errors
-Consider the following scenario, where you have a `Product` model in the app. The user wants the details of a product with a specific `Product ID`. In the following view function, `id` is the parameter obtained from the URL. It tries to determine whether any product with the given `id` is available. If not, the `Http404` exception is raised.
+Put a string argument inside the HttpResponseNotFound() to view the error message. Instead, raise Http404. Django displays a standard error page with the status.
 
-```python
+(Instead, raise Http404 exception).
+
+Consider the following scenario, where you have a Product model in the app. 
+
+The user wants the details of a product with a specific Product ID. 
+
+In the following view function, id is the parameter obtained from the URL. 
+
+It tries to determine whether any product with the given id is available. If not, the Http404 exception is raised.
+
+123456789
 from django.http import Http404, HttpResponse 
 from .models import Product 
 
@@ -47,110 +55,68 @@ def detail(request, id):
     except Product.DoesNotExist: 
         raise Http404("Product does not exist") 
     return HttpResponse("Product Found") 
-```
+Just like the HttpResponseNotFound, there are a number of other predefined classes such as HttpResponseBadRequest, HttpResponseForbidden and so on.
 
-Just like `HttpResponseNotFound`, there are a number of other predefined classes such as `HttpResponseBadRequest`, `HttpResponseForbidden`, and so on.
+Custom error pages
+If you want to show your own error page whenever the user encounters a 404 error, you must create a 404.html page and put it in the project/templates folder. 
 
----
+You will learn more about how to do this later when you explore templates.
 
-## Custom Error Pages
-If you want to show your own error page whenever the user encounters a `404` error, you must create a `404.html` page and put it in the `project/templates` folder.
+Displaying error messages in the browser
+Usually, the Django development server is in DEBUG mode, which shows the error's traceback instead of the exception.
 
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Page Not Found</title>
-</head>
-<body>
-    <h1>Oops! Page not found.</h1>
-    <p>The page you are looking for doesn't exist.</p>
-</body>
-</html>
-```
+Standard 404 error page display on browser
+To render the custom exception message, the DEBUG variable in the project’s settings should be set to False.
 
-Modify `urls.py`:
-```python
-handler404 = 'myapp.views.custom_404'
-```
+12345
+#settings.py  
 
-Define the custom view (`views.py`):
-```python
-from django.shortcuts import render
+# SECURITY WARNING: don't run with debug turned on in production!  
+  
+DEBUG=FALSE 
 
-def custom_404(request, exception):
-    return render(request, '404.html', status=404)
-```
+Page displaying the info that requested resource was not found on the server
+Exception classes
+Django’s exception classes are defined in the django.core.exceptions module. 
 
-Similarly, you can define custom views for:
-```python
-handler500 = 'myapp.views.custom_500'  # Internal Server Error
-handler403 = 'myapp.views.custom_403'  # Permission Denied
-handler400 = 'myapp.views.custom_400'  # Bad Request
-```
+Some important exception types are:
 
----
+ObjectDoesNotExist: All the exceptions of the DoesNotExist are inherited from this base exception.
 
-## Displaying Error Messages in the Browser
-Usually, the Django development server is in `DEBUG` mode, which shows the error's traceback instead of the exception.
+EmptyResultSet: This exception is raised if a query does not return any result.
 
-To render the custom exception message, the `DEBUG` variable in the project’s settings should be set to `False`.
+FieldDoesNotExist: This exception is raised when the requested field does not exist.
 
-```python
-# settings.py  
-DEBUG = False 
-```
-
----
-
-## Exception Classes
-Django’s exception classes are defined in the `django.core.exceptions` module.
-
-### Some important exception types:
-- `ObjectDoesNotExist`: All exceptions of `DoesNotExist` are inherited from this base exception.
-- `EmptyResultSet`: Raised if a query does not return any result.
-- `FieldDoesNotExist`: Raised when the requested field does not exist.
-- `MultipleObjectsReturned`: Raised when a query expected to return a single object returns multiple objects.
-- `PermissionDenied`: Raised when a user does not have permission to perform the requested action.
-- `ViewDoesNotExist`: Raised when a requested view does not exist, possibly due to incorrect mapping in the URLconf.
-
-Example of `FieldDoesNotExist`:
-```python
+1234
 try: 
     field = model._meta.get_field(field_name) 
 except FieldDoesNotExist: 
     return HttpResponse("Field Does not exist") 
-```
+MultipleObjectsReturned: When you expect a certain query to return only a single object, however multiple objects are returned. This is when you need to raise this exception.
 
-Example of `PermissionDenied`:
-```python
+PermissionDenied: This exception is raised when a user does not have permission to perform the action requested.
+
+1234
 def myview(request): 
     if not request.user.has_perm('myapp.view_mymodel'): 
         raise PermissionDenied() 
     return HttpResponse() 
-```
+ViewDoesNotExist: This exception is raised by django.urls when a requested view does not exist, possibly because of incorrect mapping defined in the URLconf. 
 
-When a certain view is called with a `POST` or `PUT` request, the request body is populated by form data. Django’s Form API defines various fields specific to the type of data stored. These fields have built-in validators. The `is_valid()` method returns `True` if the validations pass; otherwise, an exception can be raised.
+When a certain view is called with a POST or PUT request, the request body is populated by the form data. 
 
-```python
+Django’s Form API defines various fields specific to the type of data stored. For example, you have EmailField, FileField, IntegerField, MultipleChoiceField. 
+
+These fields have built-in validators. The is_valid() method returns True if the validations are passed. You can raise an exception if it returns False.
+
+1234567
 def myview(request):   
     if request.method == "POST":   
         form = MyForm(request.POST)   
         if form.is_valid():   
-            # Process the form data 
+            #process the form data 
         else:   
-            return HttpResponse("Form submitted with invalid data") 
-```
+                return HttpResponse("Form submitted with invalid data") 
+In addition to the exceptions defined in the core module, you can process the standard Python exceptions and the database-related exceptions.
 
-In addition to Django's built-in exceptions, you can also handle standard Python exceptions and database-related exceptions.
-
----
-
-## Conclusion
-### ✅ Best Practices for Error Handling in Django
-1. Use `try-except` for critical operations (like database queries).
-2. Use Django’s built-in `get_object_or_404` instead of handling `DoesNotExist` manually.
-3. Create custom error pages for a better user experience.
-4. Implement middleware for centralized error handling.
-5. Log errors properly using Django’s logging system.
-6. Always set `DEBUG=False` in production to prevent sensitive data exposure.
+In this reading, you learned how to handle errors inside the Django view.
